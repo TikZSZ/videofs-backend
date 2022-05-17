@@ -1,5 +1,7 @@
 export declare type IJwtToken = {
     id: number;
     name: string;
-    phoneNumber: string;
+    createdAt: string;
+    userCid: string;
+    authAccountId: string;
 };

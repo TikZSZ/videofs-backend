@@ -21,67 +21,181 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
+const LibLoginModule_1 = require("./LibLoginModule");
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
-const bcrypt_1 = require("bcrypt");
+const crypto_1 = require("crypto");
 let UserService = class UserService {
-    constructor(prisma) {
+    constructor(prisma, libLoginService) {
         this.prisma = prisma;
+        this.libLoginService = libLoginService;
     }
-    async signUp(userPayload) {
-        const { city, state, password } = userPayload, rest = __rest(userPayload, ["city", "state", "password"]);
-        const existingCity = await this.prisma.city.findFirst({
-            where: {
-                name: city,
-                state: {
-                    name: state
-                }
-            }
-        });
-        if (existingCity === undefined || null)
+    async getCurrentUser(token) {
+        if (!token || !token.id)
             throw new common_1.BadRequestException();
-        const hashedPassword = await this.hashPass(password);
-        return this.prisma.user.create({
-            data: Object.assign(Object.assign({}, rest), { password: hashedPassword, city: {
-                    connect: {
-                        id: existingCity.id
-                    }
-                } })
-        });
-    }
-    async auth(userId) {
-        const user = await this.prisma.user.findUnique({
+        let _a = await this.prisma.user.findUnique({
             where: {
-                id: userId
-            }
-        });
-        if (!user)
+                id: token.id,
+            },
+            include: {
+                auth: true,
+                channel: {
+                    select: {
+                        id: true,
+                        channelCid: true,
+                    },
+                },
+            },
+        }), { auth } = _a, rest = __rest(_a, ["auth"]);
+        if (!rest || !auth)
             throw new common_1.NotFoundException();
-        return user;
+        return Object.assign(Object.assign({}, auth), rest);
     }
-    async signIn(payload) {
-        const user = await this.prisma.user.findUnique({
-            where: { phoneNumber: payload.phoneNumber }
+    async createUser(data, accountId) {
+        const auth = await this.prisma.auth.findUnique({
+            where: { accountId: accountId },
         });
-        if (!user)
-            throw new common_1.NotFoundException();
-        const correctPass = await this.compare(payload.password, user.password);
-        if (!correctPass)
+        if (!auth)
+            throw new common_1.BadRequestException();
+        const hasUserSigend = this.libLoginService.verifyPayloadSig(auth.key, data.signedPayload, data.signature);
+        if (!hasUserSigend)
             throw new common_1.UnauthorizedException();
-        return user;
+        let createdAt = this.getCurrentTime();
+        const _a = await this.prisma.user.create({
+            data: {
+                name: data.name,
+                createdAt,
+                auth: {
+                    connect: {
+                        accountId: accountId,
+                    },
+                },
+            },
+            include: {
+                auth: true,
+                channel: {
+                    select: {
+                        id: true,
+                        channelCid: true,
+                    },
+                },
+            },
+        }), { auth: a } = _a, rest = __rest(_a, ["auth"]);
+        return Object.assign(Object.assign({}, a), rest);
     }
-    compare(pswd, hashPswd) {
-        return (0, bcrypt_1.compare)(pswd, hashPswd);
+    async generateToken(accountId) {
+        const { key } = await this.libLoginService.validateAccountId(accountId);
+        const token = (0, crypto_1.randomBytes)(32).toString('base64');
+        const auth = await this.prisma.auth.create({
+            data: {
+                token: token,
+                accountId,
+                key: key.key,
+                keyType: key.keyType
+            },
+            select: { token: true, accountId: true },
+        });
+        return { token: this.libLoginService.getPayloadToSign(token), accountId };
     }
-    async hashPass(pswd) {
-        const salt = await (0, bcrypt_1.genSalt)(10);
-        const hashedPassword = await (0, bcrypt_1.hash)(pswd, salt);
-        return hashedPassword;
+    async getSigToken(accountId) {
+        let auth = await this.prisma.auth.findUnique({
+            where: {
+                accountId,
+            },
+            select: {
+                token: true,
+                accountId: true,
+            },
+        });
+        if (!auth.token)
+            throw new common_1.NotFoundException();
+        const payLoadToSign = this.libLoginService.getPayloadToSign(auth.token);
+        return { token: payLoadToSign, accountId };
+    }
+    async loginUser(data, accountId) {
+        const _a = await this.prisma.auth.findUnique({
+            where: {
+                accountId: accountId,
+            },
+            include: {
+                user: {
+                    include: {
+                        channel: {
+                            select: {
+                                id: true,
+                                channelCid: true,
+                            },
+                        },
+                    },
+                },
+            },
+        }), { user } = _a, rest = __rest(_a, ["user"]);
+        if (!user)
+            throw new common_1.NotFoundException();
+        const hasUserSigend = this.libLoginService.verifyPayloadSig(rest.key, data.signedPayload, data.signature);
+        if (!hasUserSigend)
+            throw new common_1.UnauthorizedException();
+        return Object.assign(Object.assign({}, user), rest);
+    }
+    async getUser(accountId) {
+        const auth = await this.prisma.auth.findUnique({
+            where: {
+                accountId,
+            },
+            include: {
+                user: {
+                    include: {
+                        channel: {
+                            select: {
+                                id: true,
+                                channelCid: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!auth)
+            throw new common_1.NotFoundException();
+        const { user } = auth, rest = __rest(auth, ["user"]);
+        return Object.assign(Object.assign({}, user), rest);
+    }
+    async addDI(accountId, DICid) {
+        const auth = await this.prisma.auth.findUnique({
+            where: { accountId: accountId },
+        });
+        if (auth.diCid !== null)
+            throw new common_1.BadRequestException('Cannot modify DICid Once it is set');
+        return this.prisma.auth.update({
+            where: { accountId: accountId },
+            data: {
+                diCid: DICid,
+            },
+        });
+    }
+    async updateUser(accountId, data) {
+        const user = await this.prisma.user.findFirst({
+            where: { authAccountId: accountId },
+            include: { auth: true },
+        });
+        if (data.topicId && user.topicId)
+            throw new common_1.BadRequestException('Cannot modify user topic id Once it is set');
+        if (data.diCid && user.auth.diCid === null)
+            throw new common_1.BadRequestException('Cannot set user cid without DI');
+        if (data.userCid && user.userCid !== null)
+            throw new common_1.BadRequestException('Cannot modify UserCId Once it is set');
+        return this.prisma.user.update({
+            where: { authAccountId: accountId },
+            data: Object.assign({}, data),
+        });
+    }
+    getCurrentTime() {
+        return new Date().toUTCString();
     }
 };
 UserService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService, LibLoginModule_1.LibLoginService])
 ], UserService);
 exports.UserService = UserService;
 //# sourceMappingURL=user.service.js.map

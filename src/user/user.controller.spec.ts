@@ -1,3 +1,4 @@
+import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma.service';
@@ -13,6 +14,10 @@ describe('UserController', () => {
         JwtModule.register({
           secret: 'asdf',
         }),
+        ConfigModule.forRoot({
+          envFilePath: `.env.test`,
+          isGlobal: true,
+        })
       ],
       controllers: [UserController],
       providers: [UserService, PrismaService],

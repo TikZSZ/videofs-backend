@@ -9,12 +9,22 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LoginDTO = exports.UserDTO = void 0;
+exports.VerifyPhoneNumDto = exports.LoginDTO = exports.UserDTO = exports.PhoneNumberDTO = void 0;
 const class_validator_1 = require("class-validator");
-class UserDTO {
+class PhoneNumberDTO {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(10),
+    (0, class_validator_1.IsPhoneNumber)("IN"),
+    __metadata("design:type", String)
+], PhoneNumberDTO.prototype, "phoneNumber", void 0);
+exports.PhoneNumberDTO = PhoneNumberDTO;
+class UserDTO extends PhoneNumberDTO {
 }
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
 ], UserDTO.prototype, "email", void 0);
 __decorate([
@@ -23,13 +33,9 @@ __decorate([
 ], UserDTO.prototype, "name", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Length)(8),
     __metadata("design:type", String)
 ], UserDTO.prototype, "password", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(10),
-    __metadata("design:type", String)
-], UserDTO.prototype, "phoneNumber", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
@@ -39,16 +45,20 @@ __decorate([
     __metadata("design:type", String)
 ], UserDTO.prototype, "city", void 0);
 exports.UserDTO = UserDTO;
-class LoginDTO {
+class LoginDTO extends PhoneNumberDTO {
 }
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(10),
-    __metadata("design:type", String)
-], LoginDTO.prototype, "phoneNumber", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], LoginDTO.prototype, "password", void 0);
 exports.LoginDTO = LoginDTO;
+class VerifyPhoneNumDto extends PhoneNumberDTO {
+}
+__decorate([
+    (0, class_validator_1.MinLength)(4),
+    (0, class_validator_1.MaxLength)(4),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VerifyPhoneNumDto.prototype, "otp", void 0);
+exports.VerifyPhoneNumDto = VerifyPhoneNumDto;
 //# sourceMappingURL=user.dto.js.map

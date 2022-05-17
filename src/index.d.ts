@@ -1,9 +1,9 @@
-import { JwtToken } from "./types/JwtToken";
+import { IJwtToken } from "./global/types/JwtToken";
 
 declare global {
   declare namespace Express {
     export interface Request {
-      user?: JwtToken
+      user?: IJwtToken
     }
   }
 }

@@ -1,16 +1,70 @@
-import { LoginDTO, UserDTO } from './dtos/user.dto';
-import { UserEntity } from './interceptors/user.interceptor';
+import { UserEntity } from './interceptors/sanitizer';
 import { UserService } from './user.service';
-import { JwtService } from "@nestjs/jwt";
 import { IJwtToken } from 'src/global/types/JwtToken';
-import { Request as Req } from 'express';
+import { Prisma } from '@prisma/client';
+import { Request } from 'express';
 export declare class UserController {
     private userService;
-    private jwtService;
-    constructor(userService: UserService, jwtService: JwtService);
-    user(): string;
-    signUp(userPayload: UserDTO, req: Req): Promise<UserEntity>;
-    signIn(userPayload: LoginDTO, req: Req): Promise<UserEntity>;
-    auth(jwtToken: IJwtToken): Promise<UserEntity>;
-    private getToken;
+    constructor(userService: UserService);
+    getSigToken(accountId: string): Promise<{
+        token: {
+            payload: {
+                url: string;
+                data: string;
+            };
+            serverSig: string;
+        };
+        accountId: string;
+    }>;
+    createToken(accountId: string): Promise<{
+        token: {
+            payload: {
+                url: string;
+                data: string;
+            };
+            serverSig: string;
+        };
+        accountId: string;
+    }>;
+    createUser(data: {
+        name: string;
+        signedPayload: any;
+        signature: string;
+    }, accountId: string, req: Request): Promise<UserEntity>;
+    loginUser(data: any, accountId: string): Promise<UserEntity>;
+    getCurrentUser(token: IJwtToken): Promise<UserEntity>;
+    getUser(accountId: string): Promise<{
+        hasToken?: boolean;
+        isRegistered?: true;
+        accountId: string;
+        token: string;
+        signature: string;
+        keyType: string;
+        key: string;
+        diCid: string;
+        id: number;
+        name: string;
+        createdAt: string;
+        userCid: string;
+        authAccountId: string;
+        topicId: string;
+        description?: string;
+        socials?: string;
+        channelCid?: string;
+        userId?: number;
+    }>;
+    addDI(accountId: string, data: {
+        diCid: string;
+    }): Promise<{
+        diCid: string;
+    }>;
+    addUserCID(accountId: string, data: Prisma.UserUpdateInput): Promise<{
+        id: number;
+        name: string;
+        createdAt: string;
+        userCid: string;
+        authAccountId: string;
+        topicId: string;
+    }>;
+    logOut(req: Request): void;
 }

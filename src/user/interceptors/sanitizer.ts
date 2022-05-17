@@ -1,19 +1,21 @@
-import { User } from "@prisma/client";
-import { Exclude } from "class-transformer";
 
-export class UserEntity implements Partial<User> {
-  id:number;
-  name:string;
-  email:string;
-  createdAt: Date;
-  
+import { Prisma, User, Auth } from '@prisma/client';
+import { Exclude, Type } from 'class-transformer';
+
+
+export class UserEntity implements Partial<User & Auth> {
+  id: number;
+  name: string;
+  createdAt: string;
+  userCid: string;
+  authAccountId: string;
   @Exclude()
-  password?:string;
-
+  signature: string;
   @Exclude()
-  phoneNumber?:string;
-
-  constructor(partial:Partial<UserEntity>){
-    Object.assign(this,partial)
+  accountId: string;
+  @Exclude()
+  token: string;
+  constructor(partial: Partial<User & Auth | any>) {
+    Object.assign(this, partial);
   }
 }

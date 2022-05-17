@@ -10,35 +10,77 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Auth {
+  accountId String  @id @unique
+  token     String
+  signature String?
+  keyType   String
+  key       String
+  diCid     String?
+  user      User?
+}
+
 model User {
-  id          Int      @id() @default(autoincrement())
-  createdAt   DateTime @default(now())
-  email       String?   @unique()
-  password    String
+  id            Int        @id() @default(autoincrement())
+  name          String?
+  createdAt     String
+  userCid       String?
+  auth          Auth       @relation(fields: [authAccountId], references: [accountId])
+  channel       Channel?
+  videos        Video[]
+  playlists     Playlist[]
+  authAccountId String     @unique
+  topicId       String?
+}
+
+model Channel {
+  id          Int        @id @default(autoincrement())
   name        String
-  city        City     @relation(fields: [cityId], references: [id])
-  cityId      Int      
-  phoneNumber String   @unique 
+  createdAt   String
+  description String
+  socials     String?
+  channelCid  String
+  user        User       @relation(fields: [userId], references: [id])
+  userId      Int        @unique
+  videos      Video[]
+  playlists   Playlist[]
 }
 
-model Salon {
-  id     Int    @id @default(autoincrement())
-  name   String 
-  city   City   @relation(fields: [cityId], references: [id])
-  cityId Int
+model VideoToken {
+  id        Int     @id @default(autoincrement())
+  fileName  String
+  fileSize  Int
+  completed Boolean @default(false)
+  video     Video   @relation(fields: [videoId], references: [id])
+  videoId   Int     @unique
 }
 
-model State {
-  id     Int    @id @default(autoincrement())
-  name   String @unique
-  cities City[] @relation()
+model Video {
+  id           Int         @id @default(autoincrement())
+  name         String
+  displayName  String?
+  uploadedAt   String
+  description  String
+  videoCid     String?
+  private      Boolean     @default(false)
+  published    Boolean     @default(false)
+  ipfsLocation String?
+  user         User        @relation(fields: [userId], references: [id])
+  userId       Int
+  channel      Channel     @relation(fields: [channelId], references: [id])
+  channelId    Int
+  playlists    Playlist[]
+  videoToken   VideoToken?
 }
 
-model City {
-  id      Int     @id @default(autoincrement())
-  name    String  
-  state   State   @relation(fields: [stateId], references: [id])
-  stateId Int
-  user    User[]   @relation()
-  salon   Salon[]
+model Playlist {
+  id          Int     @id @default(autoincrement())
+  name        String
+  createdAt   String
+  description String?
+  user        User    @relation(fields: [userId], references: [id])
+  userId      Int
+  channel     Channel @relation(fields: [channelId], references: [id])
+  channelId   Int
+  videos      Video[]
 }

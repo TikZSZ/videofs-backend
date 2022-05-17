@@ -7,11 +7,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserModule = void 0;
+const config_1 = require("@nestjs/config");
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
 const user_controller_1 = require("./user.controller");
 const user_service_1 = require("./user.service");
 const jwt_1 = require("@nestjs/jwt");
+const LibLoginModule_1 = require("./LibLoginModule");
 let UserModule = class UserModule {
 };
 UserModule = __decorate([
@@ -19,6 +21,16 @@ UserModule = __decorate([
         imports: [
             jwt_1.JwtModule.register({
                 secret: 'asdf',
+            }),
+            LibLoginModule_1.LibLoginModule.registerAsync({
+                useFactory: (configService) => {
+                    return {
+                        domainUrl: configService.get('URL'),
+                        mirrorNodeUrl: configService.get('MIRROR_NODE'),
+                        privateKey: configService.get('PRIV_KEY'),
+                    };
+                },
+                inject: [config_1.ConfigService],
             }),
         ],
         controllers: [user_controller_1.UserController],
